@@ -4,23 +4,23 @@
 setlocal enableextensions enabledelayedexpansion
 
 set VCVARS_FILE=vcvars64.bat
-set CL_PATH_CACHE_FILE=.cl_path.txt
-set CL_EXE_PATH=cl.exe
+set CLANG_PATH_CACHE_FILE=.clang_path.txt
+set CLANG_EXE_PATH=clang.exe
 
-::is cl.exe part of PATH?
-where /Q cl.exe
+::is clang.exe part of PATH?
+where /Q clang.exe
 if !errorlevel! == 0 (
-	echo Found cl.exe in PATH
+	echo Found clang.exe in PATH
 	goto SCRIPT_END
 )
 
-if exist "!CL_PATH_CACHE_FILE!" (
-	set /p CL_EXE_PATH=<!CL_PATH_CACHE_FILE!
-	echo Using cl.exe from cache file: !CL_EXE_PATH!
+if exist "!CLANG_PATH_CACHE_FILE!" (
+	set /p CLANG_EXE_PATH=<!CLANG_PATH_CACHE_FILE!
+	echo Using clang.exe from cache file: !CLANG_EXE_PATH!
 	goto SCRIPT_END
 )
 
-echo Didn't find cl.exe in PATH - searching for Visual Studio installation...
+echo Didn't find clang.exe in PATH - searching for Visual Studio installation...
 
 set FOUND_PATH=0
 set VS_PATH=
@@ -92,12 +92,17 @@ IF !FOUND_PATH!==0 (
 			exit 1
 		)
 
-		FOR /F "tokens=*" %%g IN ('where cl.exe') do (SET CL_EXE_PATH=%%g)
-		echo !CL_EXE_PATH! > !CL_PATH_CACHE_FILE!
-		attrib !CL_PATH_CACHE_FILE! +h
+		FOR /F "tokens=*" %%g IN ('where clang.exe') do (SET CLANG_EXE_PATH=%%g)
+		if ERRORLEVEL 1 (
+			echo "Found no clang.exe in visual studio installation"
+			goto SCRIPT_END
+		)
+		
+		echo !CLANG_EXE_PATH! > !CLANG_PATH_CACHE_FILE!
+		attrib !CLANG_PATH_CACHE_FILE! +h
 	)
 ) 
 
 :SCRIPT_END
-echo !CL_EXE_PATH!
+echo !CLANG_EXE_PATH!
 exit 0
