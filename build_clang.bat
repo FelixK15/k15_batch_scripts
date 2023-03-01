@@ -1,8 +1,37 @@
 ::version 1
 
+@echo off
+setlocal enableextensions enabledelayedexpansion
+
+set FORCE_SCRIPT_DOWNLOAD=0
+
+if "%1"=="--help" (
+    echo This is a script that helps with building c/cpp code.
+    echo It will download necessary helper build scripts to help
+    echo with finding vcvarsall.bat path.
+    echo:
+    echo How to use this:
+    echo define variables C_FILES, OUTPUT_FILE_NAME, SOURCE_FOLDER, 
+    echo BUILD_CONFIGURATION, OUTPUT_FOLDER ^& COMPILER_OPTIONS
+    echo outside of this script and then call this script.
+    echo:
+    echo use option "--force-script-download" to force re-download of build scripts
+    echo: 
+    echo ^(Only C_FILES ^& OUTPUT_FILE_NAME are mandatory^)
+    echo Example when calling build_clang.bat from another script^:
+    echo:
+    echo set C_FILES=test.c 
+    echo set OUTPUT_FILE_NAME=test.exe
+    echo call build_clang.bat
+    exit /b 0
+) else if "%1"=="--force-script-download" (
+    echo forcing script download...
+    set FORCE_SCRIPT_DOWNLOAD=1
+)
+
+
 set DEBUG_OUTPUT=0
 set SCRIPT_DIRECTORY=%~dp0
-
 if "!C_FILES!"=="" (
     echo Variable C_FILES not defined.
     set errorlevel=1
@@ -60,6 +89,15 @@ if "!COMPILER_OPTIONS!"=="" (
     )
 )
 
+if "!LINKER_OPTIONS!"=="" (
+    set DEFAULT_LINKER_OPTIONS=/SUBSYSTEM:WINDOWS
+    set LINKER_OPTIONS=!DEFAULT_LINKER_OPTIONS!
+
+    if !DEBUG_OUTPUT! equ 1 (
+        echo Variable LINKER_OPTIONS not defined, using default '!DEFAULT_LINKER_OPTIONS!'
+    )
+)
+
 set OUTPUT_FOLDER=!SCRIPT_DIRECTORY!!OUTPUT_FOLDER!\!BUILD_CONFIGURATION!
 
 if not exist "!OUTPUT_FOLDER!" (
@@ -67,32 +105,44 @@ if not exist "!OUTPUT_FOLDER!" (
     mkdir !OUTPUT_FOLDER!
 )
 
-set CL_EXE_PATH_SCRIPT_PATH=!SCRIPT_DIRECTORY!find_cl_exe_path.bat
+set COMPILER_EXE_PATH_SCRIPT_PATH=!SCRIPT_DIRECTORY!find_clang_exe_path.bat
 set VCVARS_PATH_SCRIPT_PATH=!SCRIPT_DIRECTORY!find_vcvars_path.bat
-set CL_EXE_REPOSITORY_PATH=https://raw.githubusercontent.com/FelixK15/k15_batch_scripts/main/find_cl_exe_path.bat
+set COMPILER_EXE_REPOSITORY_PATH=https://raw.githubusercontent.com/FelixK15/k15_batch_scripts/main/find_clang_exe_path.bat
 set VCVARS_REPOSITORY_PATH=https://raw.githubusercontent.com/FelixK15/k15_batch_scripts/main/find_vcvars_path.bat
 
+set DOWNLOAD_SCRIPT=!FORCE_SCRIPT_DOWNLOAD!
 if not exist !CL_EXE_PATH_SCRIPT_PATH! (
+    set DOWNLOAD_SCRIPT=1
+)
+
+if !DOWNLOAD_SCRIPT! equ 1 (
     ::FK: Download file from github repository
-    bitsadmin.exe /nowrap /transfer "'cl.exe find' script download job" !CL_EXE_REPOSITORY_PATH! !CL_EXE_PATH_SCRIPT_PATH! !VCVARS_REPOSITORY_PATH! !VCVARS_PATH_SCRIPT_PATH!
+    call bitsadmin.exe /transfer compiler_script_download_job /priority HIGH !COMPILER_EXE_REPOSITORY_PATH! !COMPILER_EXE_PATH_SCRIPT_PATH! !VCVARS_REPOSITORY_PATH! !VCVARS_PATH_SCRIPT_PATH!
 
     if not ERRORLEVEL 0 (
-        echo Error trying to download script from '!CL_EXE_REPOSITORY_PATH!' & '!VCVARS_REPOSITORY_PATH!'. Please check your internet connection.
+        echo Error trying to download script from '!COMPILER_EXE_REPOSITORY_PATH!' & '!VCVARS_REPOSITORY_PATH!'. Please check your internet connection.
         set errorlevel=2
         goto ERROR_FAILURE
     )
 )
 
 ::FK: Populate COMPILER_PATH env var
-call !CL_EXE_PATH_SCRIPT_PATH!
+call !COMPILER_EXE_PATH_SCRIPT_PATH!
 
 (for %%a in (!C_FILES!) do ( 
    set C_FILES_CONCATENATED="!SCRIPT_DIRECTORY!!SOURCE_FOLDER!%%a" !C_FILES_CONCATENATED!
 ))
 
 set COMPILER_OPTIONS=!COMPILER_OPTIONS! --output "!OUTPUT_FOLDER!\!OUTPUT_FILE_NAME!"
-set CL_COMMAND="!COMPILER_PATH!" !COMPILER_OPTIONS! !C_FILES_CONCATENATED!
-!CL_COMMAND!
+set COMPILE_COMMAND="!COMPILER_PATH!" !COMPILER_OPTIONS! !C_FILES_CONCATENATED!
+!COMPILE_COMMAND!
+
+if not !errorlevel! equ 0(
+    echo build script exited with error !errorlevel!
+)
+
+exit /b !errorlevel!
 
 :ERROR_FAILURE
-echo build script exited with !errorlevel!
+echo build script exited with error !errorlevel!
+echo make sure to not call this script directly but rather call it from within another script - "build_clang --help" for more infos
