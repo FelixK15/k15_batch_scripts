@@ -11,8 +11,8 @@ if "%1"=="--help" (
     echo with finding vcvarsall.bat path.
     echo:
     echo How to use this:
-    echo define variables C_FILES, OUTPUT_FILE_NAME, SOURCE_FOLDER, 
-    echo BUILD_CONFIGURATION, OUTPUT_FOLDER, COMPILER_OPTIONS ^& LINKER_OPTIONS
+    echo define variables C_FILES, OUTPUT_FILE_NAME, SOURCE_FOLDER, INCLUDE_DIRECTORIES, 
+    echo BUILD_CONFIGURATION, OUTPUT_FOLDER, COMPILER_OPTIONS, ^& LINKER_OPTIONS
     echo outside of this script and then call this script.
     echo:
     echo use option "--force-script-download" to force re-download of build scripts
@@ -29,7 +29,10 @@ if "%1"=="--help" (
     set FORCE_SCRIPT_DOWNLOAD=1
 )
 
-set DEBUG_OUTPUT=0
+if "!DEBUG_OUTPUT!"=="" (
+    set DEBUG_OUTPUT=0
+)
+
 set SCRIPT_DIRECTORY=%~dp0
 if "!C_FILES!"=="" (
     echo Variable C_FILES not defined.
@@ -76,9 +79,9 @@ if "!OUTPUT_FOLDER!"=="" (
 if "!COMPILER_OPTIONS!"=="" (
     set DEFAULT_COMPILER_OPTIONS=/nologo /FC /TP /W3
     if "!BUILD_CONFIGURATION!"=="debug" (
-        set DEFAULT_BUILD_CONFIGURATION=!DEFAULT_COMPILER_OPTIONS! /Od /Zi /GS /MTd
+        set DEFAULT_COMPILER_OPTIONS=!DEFAULT_COMPILER_OPTIONS! /Od /Zi /GS /MTd
     ) else if "!BUILD_CONFIGURATION!"=="release" (
-        set DEFAULT_BUILD_CONFIGURATION=!DEFAULT_COMPILER_OPTIONS! /O2 /GL /Gw /MT /DK15_RELEASE_BUILD
+        set DEFAULT_COMPILER_OPTIONS=!DEFAULT_COMPILER_OPTIONS! /O2 /GL /Gw /MT /DK15_RELEASE_BUILD
     )
 
     set COMPILER_OPTIONS=!DEFAULT_COMPILER_OPTIONS!
@@ -132,9 +135,19 @@ call !COMPILER_EXE_PATH_SCRIPT_PATH!
    set C_FILES_CONCATENATED="!SCRIPT_DIRECTORY!!SOURCE_FOLDER!%%a" !C_FILES_CONCATENATED!
 ))
 
-set COMPILER_OPTIONS=!COMPILER_OPTIONS! /Fe!OUTPUT_FOLDER!\!OUTPUT_FILE_NAME!
+(for %%a in (!INCLUDE_DIRECTORIES!) do ( 
+   set INCLUDE_DIRS_CONCATENATED=/I "%%a" !INCLUDE_DIRS_CONCATENATED!
+))
+
+echo compiling build configuration !BUILD_CONFIGURATION!...
+
+set COMPILER_OPTIONS=!COMPILER_OPTIONS! !INCLUDE_DIRS_CONCATENATED! /Fe!OUTPUT_FOLDER!\!OUTPUT_FILE_NAME!
 set COMPILE_COMMAND="!COMPILER_PATH!" !COMPILER_OPTIONS! !C_FILES_CONCATENATED! /link !LINKER_OPTIONS!
 !COMPILE_COMMAND!
+
+if !DEBUG_OUTPUT! equ 1 (
+    echo !COMPILE_COMMAND!
+)
 
 if not ERRORLEVEL 0 (
     echo build script exited with error !errorlevel!
