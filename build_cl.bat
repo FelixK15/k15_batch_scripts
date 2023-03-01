@@ -136,7 +136,7 @@ set COMPILER_OPTIONS=!COMPILER_OPTIONS! /Fe!OUTPUT_FOLDER!\!OUTPUT_FILE_NAME!
 set COMPILE_COMMAND="!COMPILER_PATH!" !COMPILER_OPTIONS! !C_FILES_CONCATENATED! /link !LINKER_OPTIONS!
 !COMPILE_COMMAND!
 
-if not !errorlevel! equ 0(
+if not ERRORLEVEL 0 (
     echo build script exited with error !errorlevel!
 )
 
