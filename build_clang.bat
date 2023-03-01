@@ -111,7 +111,7 @@ set COMPILER_EXE_REPOSITORY_PATH=https://raw.githubusercontent.com/FelixK15/k15_
 set VCVARS_REPOSITORY_PATH=https://raw.githubusercontent.com/FelixK15/k15_batch_scripts/main/find_vcvars_path.bat
 
 set DOWNLOAD_SCRIPT=!FORCE_SCRIPT_DOWNLOAD!
-if not exist !CL_EXE_PATH_SCRIPT_PATH! (
+if not exist !COMPILER_EXE_PATH_SCRIPT_PATH! (
     set DOWNLOAD_SCRIPT=1
 )
 
